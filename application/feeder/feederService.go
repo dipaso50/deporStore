@@ -1,6 +1,9 @@
 package feeder
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 var mutexRegister = &sync.Mutex{}
 var mutex = &sync.Mutex{}
@@ -9,6 +12,7 @@ type IFeederService interface {
 	RegisterProduct(product string)
 	LimitReached() bool
 	AcceptConnection()
+	Report()
 }
 type FeederService struct {
 	uniqueProducts      map[string]string
@@ -54,4 +58,12 @@ func (ser FeederService) AcceptConnection() {
 	mutex.Lock()
 	defer mutex.Unlock()
 	ser.currentClientNumber++
+}
+
+func (ser FeederService) Report() {
+	fmt.Printf("Received %d unique product skus, %d duplicates, %d discard values \n",
+		len(ser.uniqueProducts), len(ser.duplicatedProducts), len(ser.discartedProducts))
+}
+
+func (ser FeederService) GracefullShutdown() {
 }

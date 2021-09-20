@@ -5,12 +5,16 @@ import (
 	"deportStore/infraestructure/cmd"
 )
 
-const port = 4000
+const (
+	port              = 4000
+	maxClientsAllowed = 5
+)
 
 func main() {
-	maxClientsAllowed := 5
-	service := feeder.NewFeederService(maxClientsAllowed)
-	socketEntry := cmd.NewSocketEntry(service)
 
-	socketEntry.ServeAndListen(port)
+	feederService := feeder.NewFeederService(maxClientsAllowed)
+	socketEntry := cmd.NewSocketEntry(feederService)
+
+	socketEntry.ServeAndListen(port, maxClientsAllowed)
+	socketEntry.WaitForIt()
 }

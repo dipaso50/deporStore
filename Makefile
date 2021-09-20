@@ -13,5 +13,5 @@ clean:
 	rm -f bin/linux/$(exeName) ; rm -f bin/windows/$(exeName).exe ; rm -rf bin/release
 
 test:
-	go test -v ./... -count=1
+	go test -v -cover ./... -count=1 -timeout 90s
 	
