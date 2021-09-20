@@ -8,7 +8,8 @@ import (
 const port = 4000
 
 func main() {
-	service := feeder.NewFeederService()
+	maxClientsAllowed := 5
+	service := feeder.NewFeederService(maxClientsAllowed)
 	socketEntry := cmd.NewSocketEntry(service)
 
 	socketEntry.ServeAndListen(port)

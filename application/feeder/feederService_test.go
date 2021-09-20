@@ -5,8 +5,11 @@ import (
 	"testing"
 )
 
+const maxAllowed = 5
+
 func TestClientNumberRestriction(t *testing.T) {
-	serv := NewFeederService()
+
+	serv := NewFeederService(maxAllowed)
 
 	for i := 0; i < 10; i++ {
 		if !serv.LimitReached() {
@@ -14,13 +17,13 @@ func TestClientNumberRestriction(t *testing.T) {
 		}
 	}
 
-	if serv.currentClientNumber > maxClients {
-		t.Errorf("Client number greater than expected, expected: %d, got: %d", maxClients, serv.currentClientNumber)
+	if serv.currentClientNumber > maxAllowed {
+		t.Errorf("Client number greater than expected, expected: %d, got: %d", maxAllowed, serv.currentClientNumber)
 	}
 }
 
 func TestConcurrentClientNumberRestriction(t *testing.T) {
-	serv := NewFeederService()
+	serv := NewFeederService(maxAllowed)
 
 	var wg sync.WaitGroup
 
@@ -37,13 +40,13 @@ func TestConcurrentClientNumberRestriction(t *testing.T) {
 
 	wg.Wait()
 
-	if serv.currentClientNumber > maxClients {
-		t.Errorf("Client number greater than expected, expected: %d, got: %d", maxClients, serv.currentClientNumber)
+	if serv.currentClientNumber > maxAllowed {
+		t.Errorf("Client number greater than expected, expected: %d, got: %d", maxAllowed, serv.currentClientNumber)
 	}
 }
 
 func TestAddProducts(t *testing.T) {
-	serv := NewFeederService()
+	serv := NewFeederService(maxAllowed)
 
 	addProducts(serv, []string{"KASL-3001", "LPOS-3001"})
 	addProducts(serv, []string{"KASL-3002", "KASL-3001"})
@@ -68,7 +71,7 @@ func TestAddProducts(t *testing.T) {
 }
 
 func TestConcurrentAddProducts(t *testing.T) {
-	serv := NewFeederService()
+	serv := NewFeederService(maxAllowed)
 
 	var wg sync.WaitGroup
 

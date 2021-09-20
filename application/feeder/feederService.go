@@ -2,8 +2,6 @@ package feeder
 
 import "sync"
 
-const maxClients = 5
-
 var mutexRegister = &sync.Mutex{}
 var mutex = &sync.Mutex{}
 
@@ -17,14 +15,16 @@ type FeederService struct {
 	duplicatedProducts  map[string]string
 	discartedProducts   map[string]string
 	currentClientNumber int
+	maxClients          int
 }
 
-func NewFeederService() FeederService {
+func NewFeederService(maxClients int) FeederService {
 	return FeederService{
 		uniqueProducts:      make(map[string]string),
 		duplicatedProducts:  make(map[string]string),
 		discartedProducts:   make(map[string]string),
 		currentClientNumber: 0,
+		maxClients:          maxClients,
 	}
 }
 
@@ -47,9 +47,7 @@ func (serv FeederService) RegisterProduct(product string) {
 }
 
 func (ser FeederService) LimitReached() bool {
-	mutex.Lock()
-	defer mutex.Unlock()
-	return ser.currentClientNumber == maxClients
+	return ser.currentClientNumber == ser.maxClients
 }
 
 func (ser FeederService) AcceptConnection() {
