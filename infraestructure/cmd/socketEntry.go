@@ -26,15 +26,23 @@ type SocketEntry struct {
 	feederService  feeder.IFeederService
 	allConnections []net.Conn
 	timeout        time.Duration
+	port           int
+	maxClients     int
 }
 
-func NewSocketEntry(s feeder.IFeederService, timeout time.Duration) SocketEntry {
-	return SocketEntry{feederService: s, allConnections: make([]net.Conn, 0), timeout: timeout}
+func NewSocketEntry(s feeder.IFeederService, timeout time.Duration, port, maxClients int) SocketEntry {
+	return SocketEntry{
+		feederService:  s,
+		allConnections: make([]net.Conn, 0),
+		timeout:        timeout,
+		port:           port,
+		maxClients:     maxClients,
+	}
 }
 
-func (se *SocketEntry) ServeAndListen(port, maxClients int) {
+func (se *SocketEntry) ServeAndListen() {
 
-	service := fmt.Sprintf(":%d", port)
+	service := fmt.Sprintf(":%d", se.port)
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	checkError(err)
@@ -44,10 +52,10 @@ func (se *SocketEntry) ServeAndListen(port, maxClients int) {
 
 	se.SetShutdownTimer()
 
-	fmt.Printf("Application started, listening at port %d\n", port)
+	fmt.Printf("Application started, listening at port %d\n", se.port)
 
 	go func() {
-		for i := 0; i < maxClients; i++ {
+		for i := 0; i < se.maxClients; i++ {
 			conn, err := listener.Accept()
 			if err == nil {
 				go se.handleRequest(conn)
@@ -108,11 +116,6 @@ func (se *SocketEntry) handleRequest(conn net.Conn) {
 }
 
 func (se *SocketEntry) gracefullShutdown() {
-
-	if len(se.allConnections) == 0 {
-		fmt.Println("No connections")
-		return
-	}
 
 	fmt.Printf("Gracefull shutdown, closing %d connections\n", len(se.allConnections))
 

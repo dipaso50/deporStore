@@ -17,6 +17,6 @@ func main() {
 	immRepo := inmemory.NewInmemoryRepo()
 	feederService := feeder.NewFeederService(immRepo)
 
-	socketEntry := cmd.NewSocketEntry(feederService, timerlimit)
-	socketEntry.ServeAndListen(port, maxClientsAllowed)
+	socketEntry := cmd.NewSocketEntry(feederService, timerlimit, port, maxClientsAllowed)
+	socketEntry.ServeAndListen()
 }

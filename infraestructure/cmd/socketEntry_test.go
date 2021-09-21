@@ -35,9 +35,9 @@ func TestConnTerminate(t *testing.T) {
 
 	sMock := serviceMock{}
 
-	sen := NewSocketEntry(sMock, defaultTimeout)
+	sen := NewSocketEntry(sMock, defaultTimeout, port, defaultClientNumber)
 
-	sen.ServeAndListen(port, defaultClientNumber)
+	sen.ServeAndListen()
 
 	if !reportCalled {
 		t.Errorf("Report method dont called on finish !!")
@@ -56,9 +56,9 @@ func TestProductRegistration(t *testing.T) {
 
 	sMock := serviceMock{}
 
-	sen := NewSocketEntry(sMock, defaultTimeout)
+	sen := NewSocketEntry(sMock, defaultTimeout, port, defaultClientNumber)
 
-	sen.ServeAndListen(port, defaultClientNumber)
+	sen.ServeAndListen()
 
 	if productRegistre != productNumber {
 		t.Errorf("Expected %d product registered, got %d", productNumber, productRegistre)
@@ -78,9 +78,9 @@ func TestClientLimit(t *testing.T) {
 
 	sMock := serviceMock{}
 
-	sen := NewSocketEntry(sMock, 10*time.Second)
+	sen := NewSocketEntry(sMock, 10*time.Second, port, clientLimit)
 
-	sen.ServeAndListen(port, clientLimit)
+	sen.ServeAndListen()
 
 	if !reportCalled {
 		t.Errorf("Report method dont called on finish !!")

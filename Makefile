@@ -1,7 +1,8 @@
 exeName=feeder
+clientName=clientFeeder
 sourceName=main.go
 
-all: compileLinux compileWindows
+all: buildClient compileLinux compileWindows
 
 compileLinux:
 	go build -o bin/linux/$(exeName) $(sourceName)
@@ -17,4 +18,13 @@ test:
 
 testv:
 	go test  -v -cover ./... -count=1
+
+run:
+	go run main.go
+
+runClient:
+	go run infraestructure/cmd/client/socketClient.go  4000
+
+buildClient:
+	go build -o bin/linux/client/$(clientName) infraestructure/cmd/client/socketClient.go
 	
