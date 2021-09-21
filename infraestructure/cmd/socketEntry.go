@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -17,6 +19,7 @@ const (
 var (
 	chTimeout             = make(chan bool)
 	chExplicitTermination = make(chan bool)
+	chControlC            = make(chan os.Signal)
 )
 
 type SocketEntry struct {
@@ -52,11 +55,16 @@ func (se *SocketEntry) ServeAndListen(port, maxClients int) {
 		}
 	}()
 
+	signal.Notify(chControlC, os.Interrupt, syscall.SIGTERM)
+
 	select {
 	case <-chTimeout:
 		se.gracefullShutdown()
 		return
 	case <-chExplicitTermination:
+		se.gracefullShutdown()
+		return
+	case <-chControlC:
 		se.gracefullShutdown()
 		return
 	}
