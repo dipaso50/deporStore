@@ -4,23 +4,23 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
+)
+
+var (
+	reportCalled        bool
+	productRegistre     int
+	defaultTimeout      = 60 * time.Second
+	defaultClientNumber = 5
 )
 
 type serviceMock struct{}
-
-var reportCalled bool
-var productRegistre int
 
 func (sm serviceMock) RegisterProduct(product string) {
 	productRegistre++
 }
 
-func (sm serviceMock) LimitReached() bool {
-	return false
-}
-func (sm serviceMock) AcceptConnection() {
-}
-func (sm serviceMock) Report() {
+func (sm serviceMock) PrintReport() {
 	reportCalled = true
 }
 
@@ -30,17 +30,57 @@ func TestConnTerminate(t *testing.T) {
 	port := 3000
 
 	go func() {
-
 		createClientAndSendMessage(message, t, port)
 	}()
 
 	sMock := serviceMock{}
 
-	sen := NewSocketEntry(sMock)
+	sen := NewSocketEntry(sMock, defaultTimeout)
 
-	sen.ServeAndListen(port, 5)
+	sen.ServeAndListen(port, defaultClientNumber)
 
-	sen.WaitForIt()
+	if !reportCalled {
+		t.Errorf("Report method dont called on finish !!")
+	}
+}
+
+func TestProductRegistration(t *testing.T) {
+
+	prds := []string{"prd1\n", "prd2\n", "prd3\n", "terminate\n"}
+	productNumber := len(prds) - 1 //restamos uno porque el terminate no debe contar como producto
+	port := 4000
+
+	go func() {
+		createClientAndSendAllMessages(prds, t, port)
+	}()
+
+	sMock := serviceMock{}
+
+	sen := NewSocketEntry(sMock, defaultTimeout)
+
+	sen.ServeAndListen(port, defaultClientNumber)
+
+	if productRegistre != productNumber {
+		t.Errorf("Expected %d product registered, got %d", productNumber, productRegistre)
+	}
+}
+
+func TestClientLimit(t *testing.T) {
+	message := "terminate\n"
+
+	port := 2000
+	clientLimit := 1
+
+	go func() {
+		createClientAndSendMessage("randommsg", t, port)
+		createClientAndSendMessage(message, t, port)
+	}()
+
+	sMock := serviceMock{}
+
+	sen := NewSocketEntry(sMock, 10*time.Second)
+
+	sen.ServeAndListen(port, clientLimit)
 
 	if !reportCalled {
 		t.Errorf("Report method dont called on finish !!")
@@ -60,30 +100,19 @@ func createClientAndSendMessage(msg string, t *testing.T, port int) {
 	}
 }
 
-func TestProductRegistration(t *testing.T) {
+func createClientAndSendAllMessages(allMsg []string, t *testing.T, port int) {
+	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
 
-	productNumber := 3
-	port := 4000
-
-	go func() {
-
-		for i := 0; i < productNumber; i++ {
-			createClientAndSendMessage("prd", t, port)
-		}
-
-		createClientAndSendMessage("terminate\n", t, port)
-
-	}()
-
-	sMock := serviceMock{}
-
-	sen := NewSocketEntry(sMock)
-
-	sen.ServeAndListen(port, 5)
-
-	sen.WaitForIt()
-
-	if productRegistre != productNumber {
-		t.Errorf("Expected %d product registered, got %d", productNumber, productRegistre)
+	if err != nil {
+		t.Error(err)
 	}
+	defer conn.Close()
+
+	for _, msg := range allMsg {
+		fmt.Printf("Sending %s\n", msg)
+		if _, err := fmt.Fprintf(conn, msg); err != nil {
+			t.Error(err)
+		}
+	}
+
 }

@@ -1,69 +1,52 @@
 package feeder
 
 import (
+	"deportStore/domain"
 	"fmt"
 	"sync"
 )
 
 var mutexRegister = &sync.Mutex{}
-var mutex = &sync.Mutex{}
 
 type IFeederService interface {
 	RegisterProduct(product string)
-	LimitReached() bool
-	AcceptConnection()
-	Report()
+	PrintReport()
 }
 type FeederService struct {
-	uniqueProducts      map[string]string
-	duplicatedProducts  map[string]string
-	discartedProducts   map[string]string
-	currentClientNumber int
-	maxClients          int
+	repo IFeederRepo
 }
 
-func NewFeederService(maxClients int) FeederService {
+func NewFeederService(rep IFeederRepo) FeederService {
 	return FeederService{
-		uniqueProducts:      make(map[string]string),
-		duplicatedProducts:  make(map[string]string),
-		discartedProducts:   make(map[string]string),
-		currentClientNumber: 0,
-		maxClients:          maxClients,
+		repo: rep,
 	}
 }
 
-func (serv FeederService) RegisterProduct(product string) {
+func (serv FeederService) RegisterProduct(sku string) {
 
 	mutexRegister.Lock()
 	defer mutexRegister.Unlock()
 
-	if !validFormat(product) {
-		serv.discartedProducts[product] = product
+	repo := serv.repo
+
+	if !validFormat(sku) {
+		repo.SaveDiscartedSKU(sku)
 		return
 	}
 
-	if _, exist := serv.uniqueProducts[product]; exist {
-		serv.duplicatedProducts[product] = product
+	if _, exist := repo.GetUniqueProduct(sku); exist {
+		repo.SaveDuplicate(domain.Product{SKUCode: sku})
 		return
 	}
 
-	serv.uniqueProducts[product] = product
+	repo.SaveUnique(domain.Product{SKUCode: sku})
 }
 
-func (ser FeederService) LimitReached() bool {
-	return ser.currentClientNumber == ser.maxClients
-}
+func (ser FeederService) PrintReport() {
+	repo := ser.repo
+	uniqueCount := repo.GetUniqueCount()
+	duplicatedCount := repo.GetDuplicateCount()
+	discartedCount := repo.GetDiscartCount()
 
-func (ser FeederService) AcceptConnection() {
-	mutex.Lock()
-	defer mutex.Unlock()
-	ser.currentClientNumber++
-}
-
-func (ser FeederService) Report() {
-	fmt.Printf("Received %d unique product skus, %d duplicates, %d discard values \n",
-		len(ser.uniqueProducts), len(ser.duplicatedProducts), len(ser.discartedProducts))
-}
-
-func (ser FeederService) GracefullShutdown() {
+	fmt.Printf("Received %d unique product skus, %d duplicates, %d discard values \n", uniqueCount, duplicatedCount, discartedCount)
 }

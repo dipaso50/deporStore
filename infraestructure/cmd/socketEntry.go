@@ -12,7 +12,6 @@ import (
 
 const (
 	terminationMessage = "terminate"
-	timerlimit         = 60 * time.Second
 )
 
 var (
@@ -23,13 +22,14 @@ var (
 type SocketEntry struct {
 	feederService  feeder.IFeederService
 	allConnections []net.Conn
+	timeout        time.Duration
 }
 
-func NewSocketEntry(s feeder.IFeederService) SocketEntry {
-	return SocketEntry{feederService: s, allConnections: make([]net.Conn, 0)}
+func NewSocketEntry(s feeder.IFeederService, timeout time.Duration) SocketEntry {
+	return SocketEntry{feederService: s, allConnections: make([]net.Conn, 0), timeout: timeout}
 }
 
-func (se *SocketEntry) ServeAndListen(port, clientLimit int) {
+func (se *SocketEntry) ServeAndListen(port, maxClients int) {
 
 	service := fmt.Sprintf(":%d", port)
 
@@ -39,22 +39,18 @@ func (se *SocketEntry) ServeAndListen(port, clientLimit int) {
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	checkError(err)
 
-	SetShutdownTimer()
+	se.SetShutdownTimer()
 
 	fmt.Printf("Application started, listening at port %d\n", port)
 
 	go func() {
-		for i := 0; i < clientLimit; i++ {
+		for i := 0; i < maxClients; i++ {
 			conn, err := listener.Accept()
 			if err == nil {
 				go se.handleRequest(conn)
 			}
 		}
 	}()
-
-}
-
-func (se *SocketEntry) WaitForIt() {
 
 	select {
 	case <-chTimeout:
@@ -64,10 +60,11 @@ func (se *SocketEntry) WaitForIt() {
 		se.gracefullShutdown()
 		return
 	}
+
 }
 
-func SetShutdownTimer() {
-	timer1 := time.NewTimer(timerlimit)
+func (se *SocketEntry) SetShutdownTimer() {
+	timer1 := time.NewTimer(se.timeout)
 
 	go func() {
 		<-timer1.C
@@ -82,9 +79,6 @@ func (se *SocketEntry) handleRequest(conn net.Conn) {
 	se.allConnections = append(se.allConnections, conn)
 
 	fmt.Println("Connected with a new client")
-
-	feeder.AcceptConnection()
-
 	for {
 		prod, _ := bufio.NewReader(conn).ReadString('\n')
 
@@ -117,7 +111,7 @@ func (se *SocketEntry) gracefullShutdown() {
 	for _, con := range se.allConnections {
 		con.Close()
 	}
-	se.feederService.Report()
+	se.feederService.PrintReport()
 }
 
 func checkError(err error) {
