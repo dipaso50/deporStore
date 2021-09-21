@@ -30,6 +30,7 @@ func TestConnTerminate(t *testing.T) {
 	port := 3000
 
 	go func() {
+		time.Sleep(1 * time.Second) //esperamos un poco al server
 		createClientAndSendMessage(message, t, port)
 	}()
 
@@ -48,20 +49,21 @@ func TestProductRegistration(t *testing.T) {
 
 	prds := []string{"prd1\n", "prd2\n", "prd3\n", "terminate\n"}
 	productNumber := len(prds) - 1 //restamos uno porque el terminate no debe contar como producto
-	port := 4000
+	port := 6000
 
 	go func() {
+		time.Sleep(1 * time.Second) //esperamos un poco al server
 		createClientAndSendAllMessages(prds, t, port)
 	}()
 
 	sMock := serviceMock{}
 
-	sen := NewSocketEntry(sMock, defaultTimeout, port, defaultClientNumber)
+	sen := NewSocketEntry(sMock, 6*time.Second, port, defaultClientNumber)
 
 	sen.ServeAndListen()
 
 	if productRegistre != productNumber {
-		t.Errorf("Expected %d product registered, got %d", productNumber, productRegistre)
+		t.Errorf("Expected %d products, got %d", productNumber, productRegistre)
 	}
 }
 
@@ -72,13 +74,14 @@ func TestClientLimit(t *testing.T) {
 	clientLimit := 1
 
 	go func() {
+		time.Sleep(1 * time.Second) //esperamos un poco al server
 		createClientAndSendMessage("randommsg", t, port)
 		createClientAndSendMessage(message, t, port)
 	}()
 
 	sMock := serviceMock{}
 
-	sen := NewSocketEntry(sMock, 10*time.Second, port, clientLimit)
+	sen := NewSocketEntry(sMock, 5*time.Second, port, clientLimit)
 
 	sen.ServeAndListen()
 
@@ -88,12 +91,22 @@ func TestClientLimit(t *testing.T) {
 }
 
 func createClientAndSendMessage(msg string, t *testing.T, port int) {
-	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
+	service := fmt.Sprintf(":%d", port)
+	conn, err := net.Dial("tcp", service)
+
+	fmt.Printf("Connection to %s\n", service)
 
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Error creating connection %v", err)
 	}
-	defer conn.Close()
+
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
 
 	if _, err := fmt.Fprintf(conn, msg); err != nil {
 		t.Error(err)
@@ -101,7 +114,10 @@ func createClientAndSendMessage(msg string, t *testing.T, port int) {
 }
 
 func createClientAndSendAllMessages(allMsg []string, t *testing.T, port int) {
-	conn, err := net.Dial("tcp", fmt.Sprintf(":%d", port))
+	service := fmt.Sprintf(":%d", port)
+	conn, err := net.Dial("tcp", service)
+
+	fmt.Printf("Connection to %s\n", service)
 
 	if err != nil {
 		t.Error(err)
@@ -109,6 +125,7 @@ func createClientAndSendAllMessages(allMsg []string, t *testing.T, port int) {
 	defer conn.Close()
 
 	for _, msg := range allMsg {
+		time.Sleep(1 * time.Second)
 		fmt.Printf("Sending %s\n", msg)
 		if _, err := fmt.Fprintf(conn, msg); err != nil {
 			t.Error(err)
