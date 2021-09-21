@@ -33,8 +33,22 @@ func main() {
 		conn.Close()
 	}()
 
-	if _, err := fmt.Fprintf(conn, "test"); err != nil {
-		fmt.Errorf("Error sending the message %s %v\n", "test", err)
-	}
+	fmt.Printf("Connection established with serveron port %d \n", port)
 
+	var sku string
+
+	for sku != "q" && sku != "terminate" {
+
+		fmt.Printf("Type a sku and hit enter to send it to the server. 'q' or 'terminate' for quit!! \n")
+
+		fmt.Scanln(&sku)
+
+		fmt.Printf("sku :(%s)\n", sku)
+
+		msg := fmt.Sprintf("%s\n", sku)
+
+		if _, err := fmt.Fprintf(conn, msg); err != nil {
+			fmt.Errorf("Error sending the message %s %v\n", "test", err)
+		}
+	}
 }
